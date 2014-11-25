@@ -13,7 +13,6 @@ import java.io.*;
 import java.util.*;
 import java.text.SimpleDateFormat;
 import java.lang.management.*;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -608,30 +607,7 @@ public class HiccupMeter extends Thread {
                     }
 
                     if (intervalHistogram.getTotalCount() > 0) {
-                        log.format(Locale.US, "%s,%d,%d\n",
-                                "jvm.hiccup.count",
-                                reportingStartTime + intervalHistogram.getEndTimeStamp(),
-                                intervalHistogram.getTotalCount());
-                        log.format(Locale.US, "%s,%d,%d\n",
-                                "jvm.hiccup.median",
-                                reportingStartTime + intervalHistogram.getEndTimeStamp(),
-                                intervalHistogram.getValueAtPercentile(50) / 1000L);
-                        log.format(Locale.US, "%s,%d,%d\n",
-                                "jvm.hiccup.p90",
-                                reportingStartTime + intervalHistogram.getEndTimeStamp(),
-                                intervalHistogram.getValueAtPercentile(90) / 1000L);
-                        log.format(Locale.US, "%s,%d,%d\n",
-                                "jvm.hiccup.p95",
-                                reportingStartTime + intervalHistogram.getEndTimeStamp(),
-                                intervalHistogram.getValueAtPercentile(95) / 1000L);
-                        log.format(Locale.US, "%s,%d,%d\n",
-                                "jvm.hiccup.p99",
-                                reportingStartTime + intervalHistogram.getEndTimeStamp(),
-                                intervalHistogram.getValueAtPercentile(99) / 1000L);
-                        log.format(Locale.US, "%s,%d,%d\n",
-                                "jvm.hiccup.max",
-                                reportingStartTime + intervalHistogram.getEndTimeStamp(),
-                                intervalHistogram.getMaxValue() / 1000L);
+                        log.print(buildLogLines(intervalHistogram, reportingStartTime, Locale.US));
                     }
                 }
             }
@@ -649,6 +625,35 @@ public class HiccupMeter extends Thread {
                 log.println("# HiccupMeter terminate/join interrupted");
             }
         }
+    }
+
+    private static String buildLogLines(Histogram intervalHistogram, long reportingStartTime, final Locale locale) {
+        final StringBuilder sb = new StringBuilder();
+        sb.append(String.format(locale, "%s,%d,%d\n",
+                "jvm.hiccup.count",
+                reportingStartTime + intervalHistogram.getEndTimeStamp(),
+                intervalHistogram.getTotalCount()));
+        sb.append(String.format(locale, "%s,%d,%d\n",
+                "jvm.hiccup.max",
+                reportingStartTime + intervalHistogram.getEndTimeStamp(),
+                intervalHistogram.getMaxValue() / 1000L));
+        sb.append(String.format(locale, "%s,%d,%d\n",
+                "jvm.hiccup.median",
+                reportingStartTime + intervalHistogram.getEndTimeStamp(),
+                intervalHistogram.getValueAtPercentile(50) / 1000L));
+        sb.append(String.format(locale, "%s,%d,%d\n",
+                "jvm.hiccup.p90",
+                reportingStartTime + intervalHistogram.getEndTimeStamp(),
+                intervalHistogram.getValueAtPercentile(90) / 1000L));
+        sb.append(String.format(locale, "%s,%d,%d\n",
+                "jvm.hiccup.p95",
+                reportingStartTime + intervalHistogram.getEndTimeStamp(),
+                intervalHistogram.getValueAtPercentile(95) / 1000L));
+        sb.append(String.format(locale, "%s,%d,%d\n",
+                "jvm.hiccup.p99",
+                reportingStartTime + intervalHistogram.getEndTimeStamp(),
+                intervalHistogram.getValueAtPercentile(99) / 1000L));
+        return sb.toString();
     }
 
     public static HiccupMeter commonMain(final String[] args, boolean exitOnError) {
