@@ -138,7 +138,6 @@ public class HiccupMeter extends Thread {
 
     protected final PrintStream log;
 
-    protected final HistogramLogWriter histogramLogWriter;
 
     protected final HiccupMeterConfiguration config;
 
@@ -350,7 +349,6 @@ public class HiccupMeter extends Thread {
         this.setName("HiccupMeter");
         config = new HiccupMeterConfiguration(args, defaultLogFileName);
         log = new PrintStream(new FileOutputStream(config.logFileName), false);
-        histogramLogWriter = new HistogramLogWriter(log);
         this.setDaemon(true);
     }
 
@@ -559,8 +557,6 @@ public class HiccupMeter extends Thread {
             hiccupRecorder = new InputRecorder(recorder, config.inputFileName);
         }
 
-        histogramLogWriter.outputComment("[Logged with " + getVersionString() + "]");
-        histogramLogWriter.outputLogFormatVersion();
 
         try {
             final long startTime;
@@ -585,17 +581,14 @@ public class HiccupMeter extends Thread {
                     reportingStartTime = startTime;
                 }
 
-                histogramLogWriter.outputStartTime(reportingStartTime);
 
             } else {
                 // Reading from input file, not sampling ourselves...:
                 hiccupRecorder.start();
                 reportingStartTime = startTime = hiccupRecorder.getCurrentTimeMsecWithDelay(0);
 
-                histogramLogWriter.outputComment("[Data read from input file \"" + config.inputFileName + "\" at " + new Date() + "]");
             }
 
-            histogramLogWriter.outputLegend();
 
             long nextReportingTime = startTime + config.reportingIntervalMs;
 
@@ -615,7 +608,30 @@ public class HiccupMeter extends Thread {
                     }
 
                     if (intervalHistogram.getTotalCount() > 0) {
-                        histogramLogWriter.outputIntervalHistogram(intervalHistogram);
+                        log.format(Locale.US, "%s,%d,%d\n",
+                                "jvm.hiccup.count",
+                                reportingStartTime + intervalHistogram.getEndTimeStamp(),
+                                intervalHistogram.getTotalCount());
+                        log.format(Locale.US, "%s,%d,%d\n",
+                                "jvm.hiccup.median",
+                                reportingStartTime + intervalHistogram.getEndTimeStamp(),
+                                intervalHistogram.getValueAtPercentile(50) / 1000L);
+                        log.format(Locale.US, "%s,%d,%d\n",
+                                "jvm.hiccup.p90",
+                                reportingStartTime + intervalHistogram.getEndTimeStamp(),
+                                intervalHistogram.getValueAtPercentile(90) / 1000L);
+                        log.format(Locale.US, "%s,%d,%d\n",
+                                "jvm.hiccup.p95",
+                                reportingStartTime + intervalHistogram.getEndTimeStamp(),
+                                intervalHistogram.getValueAtPercentile(95) / 1000L);
+                        log.format(Locale.US, "%s,%d,%d\n",
+                                "jvm.hiccup.p99",
+                                reportingStartTime + intervalHistogram.getEndTimeStamp(),
+                                intervalHistogram.getValueAtPercentile(99) / 1000L);
+                        log.format(Locale.US, "%s,%d,%d\n",
+                                "jvm.hiccup.max",
+                                reportingStartTime + intervalHistogram.getEndTimeStamp(),
+                                intervalHistogram.getMaxValue() / 1000L);
                     }
                 }
             }
